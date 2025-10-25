@@ -1,0 +1,307 @@
+Manual Técnico: Solução Automatizada de Análise e Validação de Documentos de Cartão de Crédito com Azure AI
+________________________________________
+Introdução
+A automatização da análise e validação de documentos relacionados a cartões de crédito tornou-se um requisito fundamental para empresas dos setores financeiro, varejista e de serviços que buscam aumentar a segurança, reduzir fraudes e otimizar processos empresariais. O Azure AI Document Intelligence surge como uma das soluções mais robustas para essa finalidade, oferecendo APIs e contêineres inteligentes para extração de dados, validação de autenticidade e detecção de padrões suspeitos em documentos como faturas, comprovantes de transações e extratos de cartões.
+Este manual apresenta um guia abrangente — desde conceitos e arquitetura até um exemplo prático em Python — para implementar uma solução end-to-end com Azure AI. O foco está tanto na extração automatizada de dados de documentos quanto na aplicação de estratégias de detecção de fraude, além das melhores práticas em segurança, monitoramento, deploy e compliance.
+________________________________________
+Visão Geral do Azure AI Document Intelligence
+O Azure AI Document Intelligence é o serviço de IA baseado em nuvem da Microsoft dedicado ao processamento e análise inteligente de documentos em larga escala. Ele permite:
+•	Extração de texto impresso e manuscrito, tabelas, marcas de seleção e pares chave-valor estruturados.
+•	Processamento de múltiplos formatos de documentos: PDF, JPEG, PNG, TIFF, DOCX, XLSX e outros.
+•	Modelos pré-construídos para faturas, recibos, cartões de crédito/débito e extratos bancários.
+•	Treinamento de modelos customizados para necessidades e padrões documentais específicos.
+•	APIs e SDKs para integração em Python, C#, Java, JavaScript e implantação via contêineres Docker para ambientes locais (on-premises) ou cloud.
+O serviço é amplamente utilizado em aplicações como automação de contas a pagar, processamento de despesas, onboarding de clientes, auditorias financeiras e prevenção de fraudes.
+________________________________________
+Modelos Pré-construídos para Faturas, Recibos e Cartões de Crédito
+O Azure AI oferece modelos prontos para uso, otimizados para diferentes tipos de documentos comuns em transações financeiras:
+Modelo	ID do Modelo	Objetivo Principal	Exemplos de Dados Extraídos
+Fatura	prebuilt-invoice	Analisar faturas de venda e cobranças	Nome cliente, valores, itens, datas
+Recibo	prebuilt-receipt	Extração de detalhes de comprovantes de compra	Comerciante, data, valor, itens
+Cartão de Crédito/Débito	prebuilt-creditCard	Extração de dados de cartões de pagamento	Número do cartão, emissor, validade
+Os modelos pré-criados reconhecem campos estruturais e entidades dos documentos, entregando uma resposta em JSON que pode ser consumida diretamente por aplicações de análise e workflow financeiro.
+Campos frequentemente extraídos incluem identificadores de cartão, datas, nomes de titulares, valores de transações e códigos de comerciante, entre outros.
+________________________________________
+Extração de Dados de Documentos de Cartão de Crédito
+O modelo prebuilt-creditCard (v4.0 GA) do Azure AI Document Intelligence é destinado à extração de informações-chave de cartões, sejam fotos do cartão propriamente dito, PDFs digitalizados, ou imagens de comprovantes. As principais informações extraídas incluem:
+•	Número do cartão (parcial ou masked, conforme segurança).
+•	Data de validade.
+•	Nome do titular do cartão.
+•	Banco emissor/Instituição financeira.
+A API utiliza OCR avançado, detectando texto mesmo em imagens de baixa qualidade ou fotografadas via celular, tornando a solução versátil para múltiplos pontos de entrada (app, web, automação de backend).
+A documentação em JSON segmenta resultado por páginas, pares chave-valor, probabilidade de confiança por campo extraído, e delimitações espaciais (bounding boxes/polygons) para rastreabilidade e auditoria.
+________________________________________
+Estratégias de Detecção de Fraude em Documentos de Cartão de Crédito
+A detecção de fraudes em documentos é essencial em ambientes onde ocorre grande volume de processamento, com riscos de manipulação manual, falsificação, adulteração de valores e cobranças indevidas. As principais ameaças detectadas incluem:
+•	Cobranças indevidas ou duplicadas.
+•	Manipulação de valores em faturas/recibos.
+•	Inconsistências entre comprovantes e extratos.
+•	Adulteração do número ou dados do cartão em imagens digitalizadas.
+Para atacar esses problemas, a arquitetura padrão da solução combina:
+•	Extração automatizada e confiável de campos por OCR (minimizando erro humano).
+•	Validação de autenticidade: uso de regras como algoritmo Luhn para verificar números de cartão, comparação de datas de transação e recorrência de padrões incomuns.
+•	Detecção de anomalias por machine learning: modelos de detecção baseados em séries temporais, clustering, distância de Mahalanobis, Isolation Forest e outras técnicas aplicáveis a valores atípicos e padrões de uso anormais.
+•	Comparação cruzada de dados extraídos versus dados sistêmicos (base cadastral) para identificar divergências.
+Esse pipeline de validação reduz sensivelmente falsos positivos e eleva a confiança na detecção automatizada de fraude.
+________________________________________
+Pré-processamento de Imagens e OCR
+A etapa de pré-processamento é crítica para garantir a máxima qualidade na extração e análises subsequentes. Para documentos digitalizados ou fotografados, recomenda-se:
+•	Correção de rotação (deskewing) e corte de bordas desnecessárias.
+•	Ajuste de contraste e brilho para facilitar a OCR, especialmente em recibos desbotados ou com baixo contraste.
+•	Redimensionamento para os limites permitidos pelo serviço (50x50 até 10.000x10.000 px).
+•	Conversão de PDFs multi-página em imagens por página, quando necessário.
+•	Remoção de artefatos e ruídos que possam dificultar o reconhecimento.
+O próprio Azure Document Intelligence inclui, em seu modelo de layout, reconhecimento automático dessas condições e calcula o confidence score por campo extraído — um instrumento determinante para definir quando acionar revisão manual.
+Para OCR de alta resolução, pode-se ativar features específicas via SDK, melhorando consideravelmente o reconhecimento em documentos manuscritos ou de má qualidade visual.
+________________________________________
+Modelos Customizados no Azure AI
+Embora os modelos pré-construídos sejam eficazes para a maioria dos documentos padronizados, cases corporativos frequentemente demandam extração ou validações específicas não supridas pelo modelo padrão. O Azure AI Document Intelligence permite:
+•	Treinamento de modelos personalizados com amostras rotuladas (mínimo 5 para boa performance).
+•	Definição de campos exclusivos da organização, tratamento de layouts proprietários e tabelas dinâmicas.
+•	Integração de regras de extração e validação de campos em conformidade com as regras da empresa.
+O processo via Azure Document Intelligence Studio envolve:
+1.	Upload de exemplos reais/documentos representativos.
+2.	Rotulação manual dos campos de interesse.
+3.	Treinamento e validação/teste em lote.
+4.	Download do modelo customizado, pronto para uso via API ou contêineres customizados.
+A avaliação do desempenho segue métricas clássicas (similaridade de strings por Levenshtein, acurácia de detecção de entidades) sendo possível iterar no ajuste até atingir o desempenho desejado.
+________________________________________
+Validação de Autenticidade de Documentos
+A autenticação de um documento envolve tanto checagens de integridade estruturais (assinaturas digitais, presença de marcas d’água, análise de polígonos de texto) quanto validações de conteúdo:
+•	Algoritmo Luhn: Verificação do dígito verificador do cartão de crédito/débito.
+•	Cheque de cross-dados: Confirmar se o banco emissor corresponde ao BIN extraído (identificação do emissor dentro do número do cartão).
+•	Reconciliação temporal: Certificar que todas as transações possuem datas válidas e estejam em conformidade com o ciclo de fechamento das faturas.
+•	Detecção de inconsistências: Por exemplo, divergências entre total do extrato e fatura, e incongruências entre dados de comprovantes, extratos bancários e sistema.
+•	Rastreamento de origem: O Azure permite rastrear cada campo extraído até sua localização exata na imagem/página, garantindo grounding e auditabilidade para revisão humana posterior.
+Além disso, é possível adicionar regras de negócio e até aplicar estratégias de aprendizado de máquina supervisionado ou semi-supervisionado para validar se o padrão detectado condiz com as políticas da empresa e padrões de uso do consumidor.
+________________________________________
+Configuração de Serviços Azure
+A arquitetura típica para a solução abrange os seguintes recursos Azure:
+•	Azure AI Document Intelligence (Form Recognizer): Core da análise de documentos.
+•	Azure Storage Account (Blob Storage): Repositório para documentos, faturas, imagens e arquivos processados.
+•	Azure Key Vault: Gerência e armazenamento dos segredos, chaves de API e credenciais.
+•	Azure Functions/Service Bus: Orquestração de pipelines, triggers automáticos baseada em eventos de upload, filas para processamento assíncrono.
+•	Azure Monitor/Log Analytics: Telemetria, logging e detecção de anomalias operacionalmente.
+•	Contêineres Docker (opcional): Para casos que necessitam processamento local, implementação segmentada por ambiente e requisitos mais rigorosos de privacidade de dados.
+É fundamental definir políticas de acesso restrito aos recursos via RBAC e uso de Managed Identities para eliminar o risco de vazamento de credenciais.
+________________________________________
+Exemplo Prático Completo em Python
+A seguir, será detalhado um exemplo real, passo-a-passo, implementando todo o ciclo — desde provisionamento dos recursos Azure, configuração do ambiente e integração com Python SDK, até análise automatizada de documentos de cartão de crédito.
+Pré-requisitos
+•	Conta Azure com permissões para criar recursos.
+•	Python 3.8+ instalado e ambientado.
+•	Ferramentas auxiliares: Azure CLI, pip, editor de código de sua preferência.
+________________________________________
+1. Provisionamento dos Serviços no Azure
+a. Criação do Resource Group e Serviço de Document Intelligence
+# Crie um grupo de recursos
+az group create --name rg-cartoes-docs --location eastus
+
+# Crie o recurso Document Intelligence
+az cognitiveservices account create \
+  --name docintelligencecartao \
+  --resource-group rg-cartoes-docs \
+  --kind FormRecognizer \
+  --sku S0 \
+  --location eastus \
+  --yes
+
+# Recupere endpoint e key
+az cognitiveservices account show \
+  --name docintelligencecartao \
+  --resource-group rg-cartoes-docs \
+  --query "endpoint"
+
+az cognitiveservices account keys list \
+  --name docintelligencecartao \
+  --resource-group rg-cartoes-docs
+b. Criação de Storage Account
+# Crie um novo Storage Account
+az storage account create -n docscartaostorage -g rg-cartoes-docs -l eastus --sku Standard_LRS
+
+# Crie um container para upload de arquivos
+az storage container create -n documentos-cartao --account-name docscartaostorage --public-access blob
+________________________________________
+2. Instalação das Bibliotecas Python
+Crie e ative um ambiente virtual, depois instale os pacotes necessários:
+python -m venv venv
+source venv/bin/activate  # No Windows: venv\Scripts\activate
+
+pip install azure-ai-formrecognizer azure-identity azure-storage-blob python-dotenv numpy pandas scikit-learn
+________________________________________
+3. Armazenando Segredos com Azure Key Vault (Recomendado)
+Para máxima segurança, armazene seu endpoint e chave no Azure Key Vault:
+# Criar o cofre
+az keyvault create --name kv-cartoes --resource-group rg-cartoes-docs --location eastus
+
+# Salve o endpoint e chave como segredos
+az keyvault secret set --vault-name kv-cartoes --name "DocumentIntelligenceEndpoint" --value "<endpoint>"
+az keyvault secret set --vault-name kv-cartoes --name "DocumentIntelligenceKey" --value "<key>"
+Na aplicação Python, utilize a biblioteca azure-identity para acessar os segredos.
+________________________________________
+4. Configuração de Variáveis de Ambiente
+Armazene as credenciais em um .env (ou, preferencialmente, utilize o Key Vault conforme boa prática):
+AZURE_FORM_RECOGNIZER_ENDPOINT=https://docintelligencecartao.cognitiveservices.azure.com/
+AZURE_FORM_RECOGNIZER_KEY=<sua_chave>
+________________________________________
+5. Upload de Documento para o Azure Blob Storage
+from azure.storage.blob import BlobServiceClient
+import os
+
+blob_connection_string = os.getenv('AZURE_STORAGE_CONNECTION_STRING')
+blob_service_client = BlobServiceClient.from_connection_string(blob_connection_string)
+container_name = 'documentos-cartao'
+
+with open('foto_cartao.jpg', 'rb') as data:
+    blob_service_client.get_container_client(container_name).upload_blob(
+        name='cartao_teste.jpg',
+        data=data,
+        overwrite=True
+    )
+________________________________________
+6. Script Python para Extração e Validação com Azure AI
+from azure.core.credentials import AzureKeyCredential
+from azure.ai.formrecognizer import DocumentAnalysisClient
+import os
+import json
+from dotenv import load_dotenv
+
+load_dotenv()
+
+endpoint = os.environ["AZURE_FORM_RECOGNIZER_ENDPOINT"]
+key = os.environ["AZURE_FORM_RECOGNIZER_KEY"]
+
+document_analysis_client = DocumentAnalysisClient(
+    endpoint=endpoint, credential=AzureKeyCredential(key)
+)
+
+# Path do arquivo local ou URL do documento no Blob Storage
+file_path = "foto_cartao.jpg"
+with open(file_path, "rb") as f:
+    poller = document_analysis_client.begin_analyze_document(
+        "prebuilt-creditCard", document=f
+    )
+result = poller.result()
+
+for doc in result.documents:
+    print("----- Detalhes do Cartão de Crédito Detectados -----")
+    numero = doc.fields.get("CardNumber")
+    if numero:
+        print(f"Número do Cartão: {numero.value} | Confiança: {numero.confidence:.2f}")
+    validade = doc.fields.get("ExpirationDate")
+    if validade:
+        print(f"Validade: {validade.value} | Confiança: {validade.confidence:.2f}")
+    titular = doc.fields.get("CardHolder")
+    if titular:
+        print(f"Titular: {titular.value} | Confiança: {titular.confidence:.2f}")
+    banco = doc.fields.get("Issuer")
+    if banco:
+        print(f"Banco emissor: {banco.value} | Confiança: {banco.confidence:.2f}")
+
+# Salvando resultado em arquivo JSON
+with open("resultado_cartao.json", "w") as outfile:
+    json.dump(result.to_dict(), outfile, indent=2)
+________________________________________
+7. Validação de Autenticidade e Algoritmo Luhn (Exemplo em Python)
+def luhn_check(card_number: str) -> bool:
+    digits = [int(d) for d in card_number if d.isdigit()]
+    checksum = 0
+    parity = len(digits) % 2
+    for i, digit in enumerate(digits):
+        if i % 2 == parity:
+            digit *= 2
+            if digit > 9:
+                digit -= 9
+        checksum += digit
+    return checksum % 10 == 0
+
+# Após extração
+if numero:
+    is_valid = luhn_check(numero.value)
+    print(f"O número do cartão é {'VÁLIDO' if is_valid else 'INVÁLIDO'} pelo algoritmo Luhn.")
+________________________________________
+8. Detecção Automatizada de Fraude com Machine Learning (Isolation Forest)
+A partir de históricos de transações ou valores extraídos de faturas/recibos, é possível empregar modelos de detecção de anomalias:
+import numpy as np
+from sklearn.ensemble import IsolationForest
+
+# Exemplo: lista de valores extraídos de transações
+valores = np.array([100, 200, 150, 3500, 120, 105, 4000]).reshape(-1, 1)
+clf = IsolationForest(contamination=0.1).fit(valores)
+
+pred = clf.predict(valores)
+for v, p in zip(valores.flatten(), pred):
+    if p == -1:
+        print(f"Valor suspeito detectado: R$ {v}")
+Esse mecanismo pode ser integrado ao pipeline, marcando automaticamente documentos para revisão manual ou bloqueio preventivo.
+________________________________________
+9. Automação e Pipelines de Processamento
+Para processamento em lote, recomenda-se uso de Azure Functions ou Azure Durable Functions que monitoram containers Blob para novos uploads:
+•	Trigger: Upload de novo documento dispara função Azure.
+•	Função executa script de análise e armazena resultados, logs e aciona notificações em sistemas internos.
+•	Integração com pipelines de BI para análise evolutiva de padrões de fraude.
+________________________________________
+10. Monitoramento, Logging e Auditoria
+Utilize Azure Monitor e Azure Log Analytics para:
+•	Acompanhar métricas de uso das APIs.
+•	Configurar alertas para falhas (ex: erros de OCR, baixa confiança, tentativas de fraude detectadas).
+•	Auditar todos os acessos, execuções e eventos de exceção.
+•	Manter logs detalhados sobre decisões automatizadas e revisões manuais.
+________________________________________
+Deploy via Contêineres do Document Intelligence
+Para ambientes com restrições sobre dados sensíveis, é possível fazer deploy do Azure AI Document Intelligence via contêineres Docker, garantindo que o processamento ocorra internamente, sem envio dos dados originais à nuvem (apenas metadados de cobrança são comunicados ao Azure para monitoria/licenciamento).
+Exemplo de configuração docker-compose para executar o modelo de layout ou credit-card:
+version: "3.9"
+services:
+  azure-form-recognizer-layout:
+    container_name: azure-form-recognizer-layout
+    image: mcr.microsoft.com/azure-cognitive-services/form-recognizer/layout-4.0
+    environment:
+      - EULA=accept
+      - billing=<ENDPOINT_URI>
+      - apiKey=<API_KEY>
+    ports:
+      - "5000:5000"
+    networks:
+      - ocrvnet
+networks:
+  ocrvnet:
+    driver: bridge
+________________________________________
+Segurança e Compliance em IA
+Pilares fundamentais:
+•	Transporte criptografado em TLS 1.2/1.3 para todas as interações com endpoint do Azure.
+•	Armazenamento de segredos via Azure Key Vault e rotação periódica das chaves de API.
+•	Controle de acesso por RBAC e uso de identidades gerenciadas (Managed Identities) eliminando exposição de senhas/segredos no código.
+•	Restrição de endpoints por VNet e firewall para ambientes de alta confidencialidade.
+•	Logs imutáveis e trilhas de auditoria para cada decisão automatizada.
+•	Compliance com LGPD, PCI DSS e GDPR — não armazene dados sensíveis de cartão desnecessariamente.
+Além disso, ferramentas de Azure Content Safety permitem moderação extra de conteúdo, caso sua aplicação precise filtrar, anonimizar ou restringir transmissão de dados de documentos sensíveis.
+________________________________________
+Monitoramento e Observabilidade
+Acompanhar a performance, identificar falhas e otimizar custos são aspectos críticos:
+•	Utilize Azure Monitor para métricas granulares de uso.
+•	Configure alertas automáticos para exceções, anomalias e tendências de fraude.
+•	Integre logs à ferramentas de SIEM e board de dashboards.
+•	Projete o pipeline para permitir auditoria detalhada de cada decisão automatizada, facilitando defesa em caso de disputa legal ou revisão de compliance.
+________________________________________
+Projetos de Referência no GitHub
+Projetos públicos oferecem inspiração e códigos originais:
+•	Analisador-de-Cartao-de-Credito-com-Azure (Diego Albertino): implantação end-to-end, integração web (Streamlit), upload de imagens, validação e antifraude, Azure Storage, análise e pré-processamento.
+•	AnaliseCartaoDeCreditoAzureAi (Isabel Campos Silveira): upload para Azure Blob, análise com Document Intelligence, interface e arquitetura moderna.
+•	AnomalyDetector (duda671): exemplo de detecção de anomalias em dados financeiros usando Isolation Forest (que pode ser adaptado a padrões de fraude em cartão de crédito).
+Esses projetos podem ser usados como ponto de partida ou inspiração para customizações mais avançadas.
+________________________________________
+Conclusão: Melhores Práticas e Considerações Finais
+Para obter máxima robustez, eficiência e compliance ao construir pipelines automáticos de análise de documentos de cartão de crédito com Azure, atente-se a:
+•	Use modelos pré-construídos para rápida prototipação e custom models para cenários específicos e de maior complexidade.
+•	Implemente validações estruturais (como Algoritmo Luhn) e semânticas (consistência entre documentos e padrões de transação).
+•	Automatize todo o fluxo, integrando triggers em blob storage, Azure Functions e pipelines em lote.
+•	Adote políticas rigorosas de segurança e compliance — privacidade, compliance regulatório, logging detalhado, RBAC e rotação de segredos.
+•	Capacite modelos de detecção automática de fraudes e anomalias com machine learning, ajustando limiares de confiança e incorporando feedback humano quando necessário.
+•	Use exemplos de projetos e SDKs oficiais para acelerar implantação e ganhar produtividade.
+Ao seguir essas recomendações — sempre orientado por práticas modernas de DevSecOps, governança e testes contínuos — será possível alcançar altos níveis de segurança, eficiência, rastreabilidade e confiabilidade nos processos empresariais que envolvem documentos e operações de cartões de crédito.
+________________________________________
+DICA: Periodicamente revise os lançamentos e atualizações do serviço Azure AI Document Intelligence, pois novos modelos, campos suportados e funcionalidades são constantemente adicionados, permitindo melhorias contínuas nas suas automações de negócios.
+________________________________________
+
